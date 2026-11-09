@@ -394,7 +394,11 @@ mod tests {
             "squat",
             "---\nname: superpowers:brainstorm\ndescription: x\n---\nbody\n",
         );
-        write_skill(&root, "a:b", "body from a directory name with a colon\n");
+        // Windows cannot name a directory with a colon, so only the
+        // frontmatter spelling is checked there.
+        if cfg!(not(windows)) {
+            write_skill(&root, "a:b", "body from a directory name with a colon\n");
+        }
         write_skill(&root, "fine", "---\nname: fine\n---\nbody\n");
         let skills = load_from(std::slice::from_ref(&root));
         let names: Vec<&str> = skills.iter().map(|s| s.name.as_str()).collect();

@@ -158,9 +158,17 @@ fn highlighter() -> Arc<TreeSitterHighlighter> {
 
 /// The width assistant markdown is rendered at: the terminal's, less the
 /// two columns reserved for the output gutter.
+///
+/// Tests always get the 80-column fallback: they draw into fixed-size
+/// buffers, and Windows reports its console's width even with no TTY, so the
+/// terminal running `cargo test` would otherwise decide how they wrap.
 fn markdown_width() -> usize {
-    ratatui::crossterm::terminal::size()
-        .map_or(80, |(w, _)| w as usize)
+    let size = if cfg!(test) {
+        None
+    } else {
+        ratatui::crossterm::terminal::size().ok()
+    };
+    size.map_or(80, |(w, _)| w as usize)
         .saturating_sub(usize::from(OUTPUT_GUTTER_WIDTH))
         .max(20)
 }

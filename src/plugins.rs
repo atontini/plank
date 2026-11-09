@@ -2669,7 +2669,9 @@ mod tests {
 
     /// The directory-name fallback becomes the namespace prefix, so it has to
     /// clear the same bar the manifest `name` does. `foo:bar` would mint the
-    /// ambiguous alias `foo:bar:greet`.
+    /// ambiguous alias `foo:bar:greet`. Not on Windows, where no directory
+    /// can be named with a colon.
+    #[cfg(not(windows))]
     #[test]
     fn a_directory_named_with_a_colon_is_dropped() {
         let base = scratch("dirname-colon");
@@ -2710,7 +2712,9 @@ mod tests {
     }
 
     /// A manifest with a valid `name` rescues an otherwise unusable directory
-    /// name, since the fallback never applies.
+    /// name, since the fallback never applies. Not on Windows, where no
+    /// directory can be named with a colon.
+    #[cfg(not(windows))]
     #[test]
     fn a_manifest_name_rescues_an_unusable_directory_name() {
         let base = scratch("dirname-rescued");

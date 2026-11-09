@@ -2084,7 +2084,12 @@ done
 "#;
         McpServerConfig {
             name: name.to_string(),
-            command: "/bin/sh".to_string(),
+            // The shell plank runs commands with: `/bin/sh` on Unix, Git
+            // Bash's `sh.exe` on Windows, which has no `/bin/sh`.
+            command: crate::platform::shell_command()
+                .get_program()
+                .to_string_lossy()
+                .into_owned(),
             args: vec![
                 "-c".to_string(),
                 script.to_string(),
@@ -3392,7 +3397,7 @@ done
         let script = format!(
             r#"
 while IFS= read -r line; do
-  printf '%s\n' "$line" >> {log}
+  printf '%s\n' "$line" >> '{log}'
   id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9]*\).*/\1/p')
   case "$line" in
     *'"initialize"'*)

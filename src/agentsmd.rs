@@ -174,11 +174,19 @@ mod tests {
         std::fs::write(dir.join("CLAUDE.md"), "# rules\n").unwrap();
         let got = prepare(&dir).unwrap();
         assert_eq!(got, Startup::Linked(dir.join("AGENTS.md")));
-        assert_eq!(
-            std::fs::read_link(dir.join("AGENTS.md")).unwrap(),
-            PathBuf::from("CLAUDE.md"),
-            "relative target so the checkout can move"
-        );
+        // On Windows an account that may not create symlinks gets a hard
+        // link instead (`platform::link`), which has no target to read.
+        let is_symlink = std::fs::symlink_metadata(dir.join("AGENTS.md"))
+            .unwrap()
+            .file_type()
+            .is_symlink();
+        if cfg!(unix) || is_symlink {
+            assert_eq!(
+                std::fs::read_link(dir.join("AGENTS.md")).unwrap(),
+                PathBuf::from("CLAUDE.md"),
+                "relative target so the checkout can move"
+            );
+        }
         assert_eq!(
             std::fs::read_to_string(dir.join("AGENTS.md")).unwrap(),
             "# rules\n"

@@ -192,6 +192,15 @@ jobs:
         with:
           submodules: recursive
 
+      # plank's `main` adopts USERPROFILE as HOME on Windows
+      # (`platform::ensure_home`), and every reader of `~/.plank` and the
+      # sandbox roots relies on that. The test binary never runs `main`, and
+      # Windows sets no HOME of its own, so do the same here.
+      - name: Set HOME as plank does on Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "HOME=$USERPROFILE" >> "$GITHUB_ENV"
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy

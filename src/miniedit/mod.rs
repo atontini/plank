@@ -254,6 +254,8 @@ mod tests {
         init().unwrap();
         let mut tb = TextBuffer::new(true).unwrap();
         tb.set_insert_final_newline(false);
+        // As `State::build` sets up a prompt: LF, not Edit's Windows default.
+        tb.set_crlf(false);
         tb.write_canon(b"hello\nworld");
         let mut out = String::new();
         tb.save_as_string(&mut out);

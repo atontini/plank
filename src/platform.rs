@@ -924,6 +924,47 @@ pub fn kill_tree(pid: u32) {
         .status();
 }
 
+/// Test only: sizes `file` to `len` bytes without allocating them, for the
+/// tests that need a file larger than any disk (a model bigger than RAM, a
+/// half-downloaded 20 GB part).
+///
+/// Unix file systems leave a `set_len` hole unallocated. NTFS allocates it
+/// unless the file is first marked sparse, so on a runner with a few GB free
+/// a plain `set_len` fails with "not enough space on the disk".
+///
+/// # Errors
+/// The file could not be marked sparse or resized.
+#[cfg(test)]
+pub fn set_sparse_len(file: &std::fs::File, len: u64) -> std::io::Result<()> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle as _;
+        use windows_sys::Win32::System::IO::DeviceIoControl;
+        // `FSCTL_SET_SPARSE` from winioctl.h, spelled out rather than pulling
+        // in windows-sys's whole `Win32_System_Ioctl` module for one constant.
+        const FSCTL_SET_SPARSE: u32 = 0x0009_00C4;
+        let mut returned = 0u32;
+        // SAFETY: the handle is `file`'s, open for the call's duration; the
+        // control code takes no input or output buffer.
+        let ok = unsafe {
+            DeviceIoControl(
+                file.as_raw_handle(),
+                FSCTL_SET_SPARSE,
+                std::ptr::null(),
+                0,
+                std::ptr::null_mut(),
+                0,
+                &raw mut returned,
+                std::ptr::null_mut(),
+            )
+        };
+        if ok == 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+    }
+    file.set_len(len)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

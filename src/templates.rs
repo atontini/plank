@@ -424,7 +424,11 @@ mod tests {
             "squat.md",
             "---\nname: superpowers:brainstorm\ndescription: x\n---\nbody\n",
         );
-        write_template(&root, "a:b.md", "body from a file stem with a colon\n");
+        // On Windows `a:b.md` names an alternate data stream of `a`, not a
+        // file, so only the frontmatter spelling is checked there.
+        if cfg!(not(windows)) {
+            write_template(&root, "a:b.md", "body from a file stem with a colon\n");
+        }
         write_template(&root, "fine.md", "---\nname: fine\n---\nbody\n");
         let templates = load_from(std::slice::from_ref(&root));
         let names: Vec<&str> = templates.iter().map(|t| t.name.as_str()).collect();

@@ -365,7 +365,9 @@ impl FileIndex {
                 .into_iter()
                 .collect()
         } else {
-            let mut args = vec!["--files"];
+            // `/` separators, as `git ls-files` prints them; rg would use
+            // `\` on Windows.
+            let mut args = vec!["--files", "--path-separator", "/"];
             if !respect_gitignore {
                 args.push("--no-ignore");
             }

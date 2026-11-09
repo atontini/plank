@@ -1531,13 +1531,39 @@ mod tests {
             r#"{"mcpServers":{"s":{"command":"$CLAUDE_PLUGIN_ROOT/bin/s"}}}"#,
         );
         assert!(rewrite_plugin_root(&dest).expect("ok"));
+        // Compared as parsed values: the root is JSON-escaped in the file, so
+        // a Windows root's backslashes are doubled there.
         let root = dest.display().to_string();
         let hooks = std::fs::read_to_string(dest.join("hooks/hooks.json")).expect("read");
-        assert!(hooks.contains(&format!("{root}/bin/g")), "{hooks}");
+        let cmd = json_parse(&hooks)
+            .expect("hooks.json parses")
+            .get("PreToolUse")
+            .and_then(|v| match v {
+                Json::Arr(items) => items.first().cloned(),
+                _ => None,
+            })
+            .and_then(|e| e.get("hooks").cloned())
+            .and_then(|v| match v {
+                Json::Arr(items) => items.first().and_then(|h| h.get("command")).cloned(),
+                _ => None,
+            });
+        assert_eq!(cmd, Some(Json::Str(format!("{root}/bin/g"))), "{hooks}");
         assert!(!hooks.contains("CLAUDE_PLUGIN_ROOT"), "{hooks}");
         let mcp = std::fs::read_to_string(dest.join(".mcp.json")).expect("read");
-        assert!(mcp.contains(&format!("{root}/bin/s")), "{mcp}");
+        assert_eq!(mcp_command(&mcp), Some(format!("{root}/bin/s")), "{mcp}");
         assert!(!mcp.contains("CLAUDE_PLUGIN_ROOT"), "{mcp}");
+    }
+
+    /// The `command` of server `s` in an `.mcp.json`, unescaped.
+    fn mcp_command(mcp: &str) -> Option<String> {
+        match json_parse(mcp)?
+            .get("mcpServers")?
+            .get("s")?
+            .get("command")?
+        {
+            Json::Str(s) => Some(s.clone()),
+            _ => None,
+        }
     }
 
     #[test]
@@ -2052,7 +2078,11 @@ mod tests {
         let out = install_staged(&staged, None, &install_dir(&home), false).expect("installs");
         assert!(out.rewrote_plugin_root);
         let mcp = std::fs::read_to_string(out.dest.join(".mcp.json")).expect("read");
-        assert!(mcp.contains(&out.dest.display().to_string()), "{mcp}");
+        assert_eq!(
+            mcp_command(&mcp),
+            Some(format!("{}/bin/s", out.dest.display())),
+            "{mcp}"
+        );
     }
 
     #[test]
@@ -2144,7 +2174,9 @@ mod tests {
 
     /// A root with a `"` or `\` in it spliced into the JSON text would leave
     /// an unparseable file; the rewrite goes through the tree so the writer
-    /// escapes it.
+    /// escapes it. Not on Windows, where no path holds a `"`; every Windows
+    /// root has a `\`, so the tests above cover the escape there.
+    #[cfg(not(windows))]
     #[test]
     fn rewrite_escapes_a_root_containing_a_quote() {
         let base = tmpdir("rewrite-quote");

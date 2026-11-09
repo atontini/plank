@@ -1462,8 +1462,9 @@ mod tests {
         let r = root("rec-local-path");
         let main = r.join("elsewhere/mine.gguf");
         let text = format!(
-            r#"{{"engines":{{"mine":{{"main":{{"path":"{}"}}}}}}}}"#,
-            main.display()
+            r#"{{"engines":{{"mine":{{"main":{{"path":{}}}}}}}}}"#,
+            // JSON-quoted, so a Windows path's backslashes are escaped.
+            serde_json::to_string(&main).expect("utf-8 path")
         );
         let c = layer(
             compiled(),

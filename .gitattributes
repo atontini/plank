@@ -1,0 +1,5 @@
+# Check text out with LF everywhere, Windows included. Model-facing prompt
+# text, the skill and template files compiled in with include_str!, and the
+# minisign fixtures are compared byte for byte, and a CRLF checkout (the
+# default under core.autocrlf on Windows runners) breaks every one of them.
+* text=auto eol=lf
